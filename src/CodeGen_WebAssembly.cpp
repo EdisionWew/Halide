@@ -70,6 +70,12 @@ void CodeGen_WebAssembly::visit(const Cast *op) {
         {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.wasm.sub.saturate.unsigned.v16i8", u8_sat(wild_i16x_ - wild_i16x_)},
         {Target::WasmSimd128, true, Int(16, 8), 0, "llvm.wasm.sub.saturate.signed.v8i16", i16_sat(wild_i32x_ - wild_i32x_)},
         {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.sub.saturate.unsigned.v8i16", u16_sat(wild_i32x_ - wild_i32x_)},
+
+        {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.wasm.avgr.unsigned.v16i8", u8(((wild_u16x_ + wild_u16x_) + 1) / 2)},
+        {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.wasm.avgr.unsigned.v16i8", u8(((wild_u16x_ + wild_u16x_) + 1) >> 1)},
+        {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.avgr.unsigned.v8i16", u16(((wild_u32x_ + wild_u32x_) + 1) / 2)},
+        {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.avgr.unsigned.v8i16", u16(((wild_u32x_ + wild_u32x_) + 1) >> 1)},
+
     };
 
     for (size_t i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {

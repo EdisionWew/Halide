@@ -1400,7 +1400,7 @@ Value *CodeGen_LLVM::codegen(const Expr &e) {
     internal_assert(value) << "Codegen of an expr did not produce an llvm value\n";
     // TODO: skip this correctness check for bool vectors,
     // as eliminate_bool_vectors() will cause a discrepancy for some backends
-    // (eg OpenCL, HVX); for now we're just ignoring the assert, but
+    // (eg OpenCL, HVX, WASM); for now we're just ignoring the assert, but
     // in the long run we should improve the smarts. See https://github.com/halide/Halide/issues/4194.
     const bool is_bool_vector = e.type().is_bool() && e.type().lanes() > 1;
     // TODO: skip this correctness check for prefetch, because the return type

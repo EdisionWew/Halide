@@ -131,8 +131,6 @@ WITH_INTROSPECTION ?= not-empty
 WITH_EXCEPTIONS ?=
 WITH_LLVM_INSIDE_SHARED_LIBHALIDE ?= not-empty
 
-WITH_V8 ?=
-
 # If HL_TARGET or HL_JIT_TARGET aren't set, use host
 HL_TARGET ?= host
 HL_JIT_TARGET ?= host
@@ -204,15 +202,6 @@ EXCEPTIONS_CXX_FLAGS=$(if $(WITH_EXCEPTIONS), -DWITH_EXCEPTIONS -fexceptions, )
 HEXAGON_CXX_FLAGS=$(if $(WITH_HEXAGON), -DWITH_HEXAGON, )
 HEXAGON_LLVM_CONFIG_LIB=$(if $(WITH_HEXAGON), hexagon, )
 
-# These define paths to prebuilt instances of V8, for use when JIT-testing
-# WASM and/or JavaScript Halide output. Note that you must also define WITH_V8
-# to have the relevant JavaScript VM linked in with support, so it's fine to
-# declare V8_LIB_PATH, etc permanently in your environment, even if you don't
-# always want them linked into libHalide.
-
-V8_INCLUDE_PATH ?= /V8_INCLUDE_PATH/is/undefined/
-V8_LIB_PATH ?= /V8_LIB_PATH/is/undefined/libv8_monolith.a
-
 LLVM_HAS_NO_RTTI = $(findstring -fno-rtti, $(LLVM_CXX_FLAGS))
 WITH_RTTI ?= $(if $(LLVM_HAS_NO_RTTI),, not-empty)
 RTTI_CXX_FLAGS=$(if $(WITH_RTTI), , -fno-rtti )
@@ -250,9 +239,6 @@ CXX_FLAGS += $(INTROSPECTION_CXX_FLAGS)
 CXX_FLAGS += $(EXCEPTIONS_CXX_FLAGS)
 CXX_FLAGS += $(AMDGPU_CXX_FLAGS)
 CXX_FLAGS += $(RISCV_CXX_FLAGS)
-ifneq ($(WITH_V8), )
-CXX_FLAGS += -DWITH_V8 -I$(V8_INCLUDE_PATH)
-endif
 
 # This is required on some hosts like powerpc64le-linux-gnu because we may build
 # everything with -fno-exceptions.  Without -funwind-tables, libHalide.so fails
@@ -283,14 +269,6 @@ LLVM_STATIC_LIBFILES = \
 	$(RISCV_LLVM_CONFIG_LIB)
 
 LLVM_STATIC_LIBS = -L $(LLVM_LIBDIR) $(shell $(LLVM_CONFIG) --link-static --libfiles $(LLVM_STATIC_LIBFILES) | sed -e 's/\\/\//g' -e 's/\([a-zA-Z]\):/\/\1/g')
-
-ifneq ($(WITH_V8), )
-# TODO: apparently no llvm_config flag to get canonical paths to tools
-LLVM_STATIC_LIBS += -L $(LLVM_LIBDIR) \
-	$(LLVM_LIBDIR)/liblldWasm.a \
-	$(LLVM_LIBDIR)/liblldCommon.a \
-	$(shell $(LLVM_CONFIG) --link-static --libfiles lto option)
-endif
 
 # Add a rpath to the llvm used for linking, in case multiple llvms are
 # installed. Bakes a path on the build system into the .so, so don't
@@ -928,30 +906,6 @@ endif
 endif
 endif
 
-V8_DEPS=
-V8_DEPS_LIBS=
-ifneq ($(WITH_V8), )
-ifeq ($(suffix $(V8_LIB_PATH)), .a)
-
-# Note that this rule is only used if V8_LIB_PATH is a static library
-$(BIN_DIR)/libv8_halide.$(SHARED_EXT): $(V8_LIB_PATH)
-	@mkdir -p $(@D)
-	$(CXX) -shared $(call alwayslink,$(V8_LIB_PATH)) $(INSTALL_NAME_TOOL_LD_FLAGS) -o $@
-ifeq ($(UNAME), Darwin)
-	install_name_tool -id $(CURDIR)/$(BIN_DIR)/libv8_halide.$(SHARED_EXT) $(BIN_DIR)/libv8_halide.$(SHARED_EXT)
-endif
-
-V8_DEPS=$(BIN_DIR)/libv8_halide.$(SHARED_EXT)
-V8_DEPS_LIBS=$(realpath $(BIN_DIR)/libv8_halide.$(SHARED_EXT))
-
-else
-
-V8_DEPS=$(V8_LIB_PATH)
-V8_DEPS_LIBS=$(V8_LIB_PATH)
-
-endif
-endif
-
 .PHONY: all
 all: distrib test_internal
 
@@ -987,7 +941,7 @@ $(BUILD_DIR)/llvm_objects/list: $(OBJECTS) $(INITIAL_MODULES)
 	mv list.new list; \
 	fi
 
-$(LIB_DIR)/libHalide.a: $(OBJECTS) $(INITIAL_MODULES) $(BUILD_DIR)/llvm_objects/list $(V8_DEPS)
+$(LIB_DIR)/libHalide.a: $(OBJECTS) $(INITIAL_MODULES) $(BUILD_DIR)/llvm_objects/list
 	# Archive together all the halide and llvm object files
 	@mkdir -p $(@D)
 	@rm -f $(LIB_DIR)/libHalide.a
@@ -1000,9 +954,9 @@ else
 LIBHALIDE_SONAME_FLAGS=
 endif
 
-$(BIN_DIR)/libHalide.$(SHARED_EXT): $(OBJECTS) $(INITIAL_MODULES) $(V8_DEPS)
+$(BIN_DIR)/libHalide.$(SHARED_EXT): $(OBJECTS) $(INITIAL_MODULES)
 	@mkdir -p $(@D)
-	$(CXX) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_LIBS_FOR_SHARED_LIBHALIDE) $(LLVM_SYSTEM_LIBS) $(COMMON_LD_FLAGS) $(V8_DEPS_LIBS) $(INSTALL_NAME_TOOL_LD_FLAGS) $(LIBHALIDE_SONAME_FLAGS) -o $(BIN_DIR)/libHalide.$(SHARED_EXT)
+	$(CXX) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_LIBS_FOR_SHARED_LIBHALIDE) $(LLVM_SYSTEM_LIBS) $(COMMON_LD_FLAGS) $(INSTALL_NAME_TOOL_LD_FLAGS) $(LIBHALIDE_SONAME_FLAGS) -o $(BIN_DIR)/libHalide.$(SHARED_EXT)
 ifeq ($(UNAME), Darwin)
 	install_name_tool -id $(CURDIR)/$(BIN_DIR)/libHalide.$(SHARED_EXT) $(BIN_DIR)/libHalide.$(SHARED_EXT)
 endif
@@ -2056,9 +2010,6 @@ $(BENCHMARK_APPS): distrib build_python_bindings
 		> /dev/null \
 		|| exit 1
 
-# TODO: we deliberately leave out the `|| exit 1` (for now) when *running*
-# the benchmarks, as some will currently crash at runtime when running in
-# wasm + wasm_simd128 due to a known bug in V8 v7.5
 .PHONY: benchmark_apps $(BENCHMARK_APPS)
 benchmark_apps: $(BENCHMARK_APPS)
 	@for APP in $(BENCHMARK_APPS); do \
@@ -2069,7 +2020,8 @@ benchmark_apps: $(BENCHMARK_APPS)
 			HALIDE_DISTRIB_PATH=$(CURDIR)/$(DISTRIB_DIR) \
 			HALIDE_PYTHON_BINDINGS_PATH=$(CURDIR)/$(BIN_DIR)/python3_bindings \
 			BIN_DIR=$(CURDIR)/$(BIN_DIR)/apps/$${APP}/bin \
-			HL_TARGET=$(HL_TARGET) ; \
+			HL_TARGET=$(HL_TARGET) \
+			|| exit 1 ; \
 	done
 
 # TODO(srj): the python bindings need to be put into the distrib folders;
