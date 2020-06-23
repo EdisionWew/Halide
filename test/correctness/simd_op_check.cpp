@@ -1495,16 +1495,18 @@ public:
                 check("v128.andnot", 2 * w, i64_1 & ~i64_2);
 
                 // Bitwise select
-                // check("v128.bitselect", 16 * w, ((u8_1 & u8_3) | (u8_2 & ~u8_3)));
-                // check("v128.bitselect", 8 * w, ((u16_1 & u16_3) | (u16_2 & ~u16_3)));
-                // check("v128.bitselect", 4 * w, ((u32_1 & u32_3) | (u32_2 & ~u32_3)));
-                // check("v128.bitselect", 2 * w, ((u64_1 & u64_3) | (u64_2 & ~u64_3)));
+                check("v128.bitselect", 16 * w, ((u8_1 & u8_3) | (u8_2 & ~u8_3)));
+                check("v128.bitselect", 8 * w, ((u16_1 & u16_3) | (u16_2 & ~u16_3)));
+                check("v128.bitselect", 4 * w, ((u32_1 & u32_3) | (u32_2 & ~u32_3)));
+                check("v128.bitselect", 2 * w, ((u64_1 & u64_3) | (u64_2 & ~u64_3)));
 
-                // check("v128.bitselect", 16 * w, select(bool_1, u8_1, u8_2));
-                // check("v128.bitselect", 8 * w, select(bool_1, u16_1, u16_2));
+                check("v128.bitselect", 16 * w, select(bool_1, u8_1, u8_2));
+                check("v128.bitselect", 8 * w, select(bool_1, u16_1, u16_2));
 // TODO(srj): NOT WORKING AT TRUNK
-                check("v128.bitselect", 4 * w, select(bool_1, u32_1, u32_2));
+                // check("v128.bitselect", 4 * w, select(bool_1, u32_1, u32_2));
                 // check("v128.bitselect", 2 * w, select(bool_1, u64_1, u64_2));
+                // check("v128.bitselect", 4 * w, select(bool_1, f32_1, f32_2));
+                // check("v128.bitselect", 2 * w, select(bool_1, f64_1, f64_2));
 
                 // Any lane true
                 // All lanes true

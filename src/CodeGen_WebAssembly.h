@@ -21,6 +21,7 @@ protected:
     using CodeGen_Posix::visit;
 
     void visit(const Cast *) override;
+    void visit(const Select *op) override;
 
     std::string mcpu() const override;
     std::string mattrs() const override;

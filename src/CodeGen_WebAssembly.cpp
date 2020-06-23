@@ -110,6 +110,36 @@ void CodeGen_WebAssembly::visit(const Cast *op) {
     CodeGen_Posix::visit(op);
 }
 
+void CodeGen_WebAssembly::visit(const Select *op) {
+//     Expr cond = op->condition;
+//     Expr true_value = op->true_value;
+//     Expr false_value = op->false_value;
+//     internal_assert(true_value.type() == false_value.type());
+
+//     // For wasm, we want to use v128.bitselect for vector types;
+//     // to achieve that, we need the condition to be an int of the same bit-width
+//     // as the value types, with values of either all-ones or all-zeroes.
+//     const int bits = true_value.type().bits();
+//     const int lanes = true_value.type().lanes();
+// debug(0)<<"cond1 "<<cond<<"\n";
+//     if (cond.type().is_bool() && lanes > 1) {
+//         if (cond.type().is_scalar()) {
+// debug(0)<<"cond2 "<<cond<<"\n";
+//             cond = Broadcast::make(cond, lanes);
+//         }
+// debug(0)<<"cond3 "<<cond<<"\n";
+//         cond = -cast(Int(bits, lanes), cond);
+// debug(0)<<"cond4 "<<cond<<"\n";
+//         Value *cmp = codegen(cond);
+//         Value *a = codegen(true_value);
+//         Value *b = codegen(false_value);
+//         value = builder->CreateSelect(cmp, a, b);
+//     } else
+    {
+        CodeGen_Posix::visit(op);
+    }
+}
+
 string CodeGen_WebAssembly::mcpu() const {
     return "";
 }
