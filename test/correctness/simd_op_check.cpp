@@ -45,6 +45,8 @@ public:
         use_vsx = target.has_feature(Target::VSX);
         use_power_arch_2_07 = target.has_feature(Target::POWER_ARCH_2_07);
         use_wasm_simd128 = target.has_feature(Target::WasmSimd128);
+        use_wasm_sat_float_to_int = target.has_feature(Target::WasmSatFloatToInt);
+        use_wasm_sign_ext = target.has_feature(Target::WasmSignExt);
     }
 
     void add_tests() override {
@@ -1360,10 +1362,31 @@ public:
         check("f32.abs", 1, abs(f32_1));
         check("f32.neg", 1, -f32_1);
 
+        if (use_wasm_sat_float_to_int) {
+            check("i32.trunc_sat_f32_s", 1, i32(f32_1));
+            check("i32.trunc_sat_f32_u", 1, u32(f32_1));
+            check("i32.trunc_sat_f64_s", 1, i32(f64_1));
+            check("i32.trunc_sat_f64_u", 1, u32(f64_1));
+
+            check("i64.trunc_sat_f32_s", 1, i64(f32_1));
+            check("i64.trunc_sat_f32_u", 1, u64(f32_1));
+            check("i64.trunc_sat_f64_s", 1, i64(f64_1));
+            check("i64.trunc_sat_f64_u", 1, u64(f64_1));
+        }
+
+        if (use_wasm_sign_ext) {
+            // TODO: current LLVM doesn't reliably emit i32.extend8_s here --
+            // but the same bitcode does work when run thru llc. Very odd.
+            //
+            // check("i32.extend8_s", 1, i32(i8(x) ^ 1));
+            // check("i32.extend16_s", 1, i32(i16(x) ^ 1));
+            // check("i64.extend8_s", 1, i64(i8(x) ^ 1));
+            // check("i64.extend16_s", 1, i32(i16(x) ^ 1));
+            // check("i64.extend32_s", 1, i64(i32(x) ^ 1));
+        }
+
         if (use_wasm_simd128) {
-// TODO
-            // for (int w = 1; w <= 4; w <<= 1) {
-            for (int w = 1; w <= 1; w <<= 1) {
+            for (int w = 1; w <= 4; w <<= 1) {
                 // Create vector with identical lanes
                 check("i8x16.splat", 16 * w, u8_1 * u8(42));
                 check("i16x8.splat", 8 * w, u16_1 * u16(42));
@@ -1383,8 +1406,10 @@ public:
                 check("v8x16.shuffle", 4 * w, in_u32(2 * x));
 
                 // Swizzling using variable indices
-// TODO(srj): NOT WORKING AT TRUNK
-//                check("v8x16.swizzle", 16*w, in_u8(in_u8(x+32)));  // -- TODO: fails to generate, but is this the right expr?
+                // (This fails to generate, but that's not entirely surprising -- I don't
+                // think we ever attempt to emit the most general-purpose swizzles in Halide
+                // code, so this may or may not be a defect.)
+                // check("v8x16.swizzle", 16*w, in_u8(in_u8(x+32)));
 
                 // Integer addition
                 check("i8x16.add", 16 * w, i8_1 + i8_2);
@@ -1450,23 +1475,38 @@ public:
                 check("i16x8.abs", 8 * w, abs(i16_1));
                 check("i32x4.abs", 4 * w, abs(i32_1));
 
-                // Left shift by scalar
-// TODO(srj): NOT WORKING AT TRUNK
-                // check("i8x16.shl",   16*w, i8_1 << in_i8(0));
-                // check("i16x8.shl",   8*w, i16_1 << i32(x));
-                // check("i32x4.shl",   4*w, i32_1 << i32(x));
-                // check("i64x2.shl",   2*w, i64_1 << i32(x));
+                // Left shift by constant scalar
+                check("i8x16.shl",   16*w, i8_1 << i8(7));
+                check("i16x8.shl",   8*w, i16_1 << i16(7));
+                check("i32x4.shl",   4*w, i32_1 << i32(7));
+                check("i64x2.shl",   2*w, i64_1 << i64(7));
 
-                // Right shift by scalar
-// TODO(srj): NOT WORKING AT TRUNK
-                // check("i8x16.shr_s",   16*w, i8_1 >> i32(x));
-                // check("i16x8.shr_s",   8*w, i16_1 >> i32(x));
+                // Left shift by variable scalar
+// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // check("i8x16.shl",   16*w, i8_1 << i8(x));
+                // check("i16x8.shl",   8*w, i16_1 << i16(x));
+                // check("i32x4.shl",   4*w, i32_1 << i32(x));
+                // check("i64x2.shl",   2*w, i64_1 << i64(x));
+
+                // Right shift by constant scalar
+                check("i8x16.shr_s",   16*w, i8_1 >> i8(7));
+                check("i16x8.shr_s",   8*w, i16_1 >> i16(7));
+                check("i32x4.shr_s",   4*w, i32_1 >> i32(7));
+                check("i64x2.shr_s",   2*w, i64_1 >> i64(7));
+                check("i8x16.shr_u",   16*w, u8_1 >> i8(7));
+                check("i16x8.shr_u",   8*w, u16_1 >> i16(7));
+                check("i32x4.shr_u",   4*w, u32_1 >> i32(7));
+                check("i64x2.shr_u",   2*w, u64_1 >> i64(7));
+
+// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // check("i8x16.shr_s",   16*w, i8_1 >> i8(x));
+                // check("i16x8.shr_s",   8*w, i16_1 >> i16(x));
                 // check("i32x4.shr_s",   4*w, i32_1 >> i32(x));
-                // check("i64x2.shr_s",   2*w, i64_1 >> i32(x));
-                // check("i8x16.shr_u",   16*w, u8_1 >> i32(x));
-                // check("i16x8.shr_u",   8*w, u16_1 >> i32(x));
+                // check("i64x2.shr_s",   2*w, i64_1 >> i64(x));
+                // check("i8x16.shr_u",   16*w, u8_1 >> i8(x));
+                // check("i16x8.shr_u",   8*w, u16_1 >> i16(x));
                 // check("i32x4.shr_u",   4*w, u32_1 >> i32(x));
-                // check("i64x2.shr_u",   2*w, u64_1 >> i32(x));
+                // check("i64x2.shr_u",   2*w, u64_1 >> i64(x));
 
                 // Bitwise logic
                 check("v128.and", 16 * w, i8_1 & i8_2);
@@ -1502,7 +1542,7 @@ public:
 
                 check("v128.bitselect", 16 * w, select(bool_1, u8_1, u8_2));
                 check("v128.bitselect", 8 * w, select(bool_1, u16_1, u16_2));
-// TODO(srj): NOT WORKING AT TRUNK
+// TODO(srj): NOT BEING GENERATED AT TRUNK
                 // check("v128.bitselect", 4 * w, select(bool_1, u32_1, u32_2));
                 // check("v128.bitselect", 2 * w, select(bool_1, u64_1, u64_2));
                 // check("v128.bitselect", 4 * w, select(bool_1, f32_1, f32_2));
@@ -1576,36 +1616,38 @@ public:
                 check("v128.load", 2 * w, f64_1);
 
                 // Load vector with identical lanes
-// TODO(srj): NOT WORKING AT TRUNK
-                // check("v8x16.load_splat", 16 * w, u8_1);
-                // check("v16x8.load_splat", 16 * w, u8_1);
-                // check("v32x4.load_splat", 16 * w, u8_1);
-                // check("v64x2.load_splat", 16 * w, u8_1);
+                check("v8x16.load_splat", 16 * w, in_u8(0));
+                check("v16x8.load_splat", 8 * w, in_u16(0));
+                check("v32x4.load_splat", 4 * w, in_u32(0));
+                check("v64x2.load_splat", 2 * w, in_u64(0));
 
                 // Load and Extend
-// TODO(srj): NOT WORKING AT TRUNK
-                // check("i16x8.load8x8_s", 16 * w, u8_1);
-                // check("i16x8.load8x8_u", 16 * w, u8_1);
-                // check("i32x4.load16x4_s", 16 * w, u8_1);
-                // check("i32x4.load16x4_u", 16 * w, u8_1);
-                // check("i64x2.load32x2_s", 16 * w, u8_1);
-                // check("i64x2.load32x2_u", 16 * w, u8_1);
+                if (w == 1) {
+                    check("i16x8.load8x8_s", 8 * w, i16(i8_1));
+                    check("i16x8.load8x8_u", 8 * w, u16(u8_1));
+                    check("i32x4.load16x4_s", 4 * w, i32(i16_1));
+                    check("i32x4.load16x4_u", 4 * w, u32(u16_1));
+                    check("i64x2.load32x2_s", 2 * w, i64(i32_1));
+                    check("i64x2.load32x2_u", 2 * w, u64(u32_1));
+                }
 
-// Integer to integer narrowing
-// i8x16.narrow_i16x8_s(a: v128, b: v128) -> v128
-// i8x16.narrow_i16x8_u(a: v128, b: v128) -> v128
-// i16x8.narrow_i32x4_s(a: v128, b: v128) -> v128
-// i16x8.narrow_i32x4_u(a: v128, b: v128) -> v128
+                // Integer to integer narrowing
+// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // check("i8x16.narrow_i16x8_s", 16*w, i8(i16_1));
+                // check("i8x16.narrow_i16x8_u", 16*w, u8(u16_1));
+                // check("i16x8.narrow_i32x4_s", 8*w, i16(i32_1));
+                // check("i16x8.narrow_i32x4_u", 8*w, u8(u16_1));
 
-// Integer to integer widening
-// i16x8.widen_low_i8x16_s(a: v128) -> v128
-// i16x8.widen_high_i8x16_s(a: v128) -> v128
-// i16x8.widen_low_i8x16_u(a: v128) -> v128
-// i16x8.widen_high_i8x16_u(a: v128) -> v128
-// i32x4.widen_low_i16x8_s(a: v128) -> v128
-// i32x4.widen_high_i16x8_s(a: v128) -> v128
-// i32x4.widen_low_i16x8_u(a: v128) -> v128
-// i32x4.widen_high_i16x8_u(a: v128) -> v128
+                // Integer to integer widening
+// TODO(srj): NOT BEING GENERATED AT TRUNK (but these tests are bogus)
+                // check("i16x8.widen_low_i8x16_s", 8*w, i8(x) * 2);
+                // check("i16x8.widen_high_i8x16_s", 8*w, i16(i8_1));
+                // check("i32x4.widen_low_i16x8_s", 4*w, i32(i16_1));
+                // check("i32x4.widen_high_i16x8_s", 4*w, i32(i16_1));
+                // check("i16x8.widen_low_i8x16_u", 8*w, u16(u8_1));
+                // check("i16x8.widen_high_i8x16_u", 8*w, u16(u8_1));
+                // check("i32x4.widen_low_i16x8_u", 4*w, u32(u16_1));
+                // check("i32x4.widen_high_i16x8_u", 4*w, u32(u16_1));
 
                 // Store
                 check("v128.store", 16 * w, i8_1);
@@ -1671,6 +1713,8 @@ private:
     bool use_ssse3{false};
     bool use_vsx{false};
     bool use_wasm_simd128{false};
+    bool use_wasm_sat_float_to_int{false};
+    bool use_wasm_sign_ext{false};
     const Var x{"x"}, y{"y"};
 };
 }  // namespace

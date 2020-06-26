@@ -316,7 +316,6 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
         // "--verbose",
         // "-error-limit=0",
         // "--print-gc-sections",
-        // "--export=__data_end",  TODO: do we still need this?
         "--export=__heap_base",
         "--allow-undefined",
         "-zstack-size=" + std::to_string(stack_size),
@@ -1296,6 +1295,9 @@ wabt::Features calc_features(const Target &target) {
     }
     if (target.has_feature(Target::WasmSimd128)) {
         f.enable_simd();
+    }
+    if (target.has_feature(Target::WasmSatFloatToInt)) {
+        f.enable_sat_float_to_int();
     }
     return f;
 }

@@ -16,12 +16,6 @@ using namespace llvm;
 using std::string;
 using std::vector;
 
-/*
-    TODO:
-        - wasm only supports an i8x16 shuffle directly; we should sniff our Shuffle
-          nodes for (eg) i16x8 and synthesize the right thing
-*/
-
 CodeGen_WebAssembly::CodeGen_WebAssembly(Target t)
     : CodeGen_Posix(t) {
 #if !defined(WITH_WEBASSEMBLY)
@@ -76,6 +70,12 @@ void CodeGen_WebAssembly::visit(const Cast *op) {
         {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.avgr.unsigned.v8i16", u16(((wild_u32x_ + wild_u32x_) + 1) / 2)},
         {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.avgr.unsigned.v8i16", u16(((wild_u32x_ + wild_u32x_) + 1) >> 1)},
 
+        // TODO: LLVM should support this directly, but doesn't yet.
+        // To make this work, we need to be able to call the intrinsics with two vecs.
+        // {Target::WasmSimd128, false, Int(8, 16), 0, "llvm.wasm.narrow.signed.v16i8.v8i16", i8(wild_i16x_)},
+        // {Target::WasmSimd128, false, Int(16, 8), 0, "llvm.wasm.narrow.signed.v8i16.v4i32", i16(wild_i32x_)},
+        // {Target::WasmSimd128, false, UInt(8, 16), 0, "llvm.wasm.narrow.unsigned.v16i8.v8i16", u8(wild_u16x_)},
+        // {Target::WasmSimd128, false, UInt(16, 8), 0, "llvm.wasm.narrow.unsigned.v8i16.v4i32", u16(wild_u32x_)},
     };
 
     for (size_t i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
@@ -110,36 +110,6 @@ void CodeGen_WebAssembly::visit(const Cast *op) {
     CodeGen_Posix::visit(op);
 }
 
-void CodeGen_WebAssembly::visit(const Select *op) {
-//     Expr cond = op->condition;
-//     Expr true_value = op->true_value;
-//     Expr false_value = op->false_value;
-//     internal_assert(true_value.type() == false_value.type());
-
-//     // For wasm, we want to use v128.bitselect for vector types;
-//     // to achieve that, we need the condition to be an int of the same bit-width
-//     // as the value types, with values of either all-ones or all-zeroes.
-//     const int bits = true_value.type().bits();
-//     const int lanes = true_value.type().lanes();
-// debug(0)<<"cond1 "<<cond<<"\n";
-//     if (cond.type().is_bool() && lanes > 1) {
-//         if (cond.type().is_scalar()) {
-// debug(0)<<"cond2 "<<cond<<"\n";
-//             cond = Broadcast::make(cond, lanes);
-//         }
-// debug(0)<<"cond3 "<<cond<<"\n";
-//         cond = -cast(Int(bits, lanes), cond);
-// debug(0)<<"cond4 "<<cond<<"\n";
-//         Value *cmp = codegen(cond);
-//         Value *a = codegen(true_value);
-//         Value *b = codegen(false_value);
-//         value = builder->CreateSelect(cmp, a, b);
-//     } else
-    {
-        CodeGen_Posix::visit(op);
-    }
-}
-
 string CodeGen_WebAssembly::mcpu() const {
     return "";
 }
@@ -158,15 +128,10 @@ string CodeGen_WebAssembly::mattrs() const {
         sep = ",";
     }
 
-    // TODO: Emscripten doesn't seem to be able to validate wasm that contains this yet.
-    // We could only generate for JIT mode (where we know we can enable it), but that
-    // would mean the execution model for JIT vs AOT could be slightly different,
-    // so leave it out entirely until we can do it uniformly.
-    // if (target.has_feature(Target::JIT)) {
-    //    s << sep << "+nontrapping-fptoint";
-    //    sep = ",";
-    // }
-    // TODO: this is "sat_float_to_int" in WABT
+    if (target.has_feature(Target::WasmSatFloatToInt)) {
+       s << sep << "+nontrapping-fptoint";
+       sep = ",";
+    }
 
     user_assert(target.os == Target::WebAssemblyRuntime)
         << "wasmrt is the only supported 'os' for WebAssembly at this time.";
