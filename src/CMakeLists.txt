@@ -415,9 +415,7 @@ if (WITH_WABT)
         GIT_SUBMODULES "test"
     )
     FetchContent_MakeAvailable(wabt)
-    set_target_properties(wabt PROPERTIES
-                          VISIBILITY_INLINES_HIDDEN TRUE
-                          POSITION_INDEPENDENT_CODE TRUE)
+    set_target_properties(wabt PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
     target_include_directories(wabt PRIVATE ${wabt_SOURCE_DIR} ${wabt_BINARY_DIR}) # ${wabt_SOURCE_DIR})
 
     target_link_libraries(Halide PRIVATE wabt)
