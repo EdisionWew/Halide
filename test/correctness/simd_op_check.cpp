@@ -1878,8 +1878,8 @@ int main(int argc, char **argv) {
     printf("HL_TARGET is: %s\n", hl_target.to_string().c_str());
 
 #if LLVM_VERSION < 110
-    if (target.arch == Target::WebAssembly) {
-        printf("[SKIP] WebAssembly simd code is only supported with LLVM 11+.\n");
+    if (hl_target.arch == Target::WebAssembly) {
+        printf("[SKIP] WebAssembly simd code is only supported with LLVM 11+ (saw %d).\n", LLVM_VERSION);
         return 0;
     }
 #endif
