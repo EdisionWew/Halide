@@ -329,6 +329,10 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
     for (int i = 0; i < c; ++i)
         lld_args[i] = lld_arg_strs[i].c_str();
 
+    // TODO: something in lld::wasm::link() is doing something bad at exit time
+    // (throwing inside a global dtor? atexit? set_terminate?) that converts
+    // an exit-with-error into an exit-via-abort, which breaks our error tests.
+    // Find and fix.
 #if LLVM_VERSION >= 110
     if (!lld::wasm::link(lld_args, /*CanExitEarly*/ false, llvm::outs(), llvm::errs())) {
         internal_error << "lld::wasm::link failed\n";
