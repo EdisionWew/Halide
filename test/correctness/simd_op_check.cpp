@@ -1877,6 +1877,13 @@ int main(int argc, char **argv) {
     printf("host is:      %s\n", host.to_string().c_str());
     printf("HL_TARGET is: %s\n", hl_target.to_string().c_str());
 
+#if LLVM_VERSION < 110
+    if (target.arch == Target::WebAssembly) {
+        printf("[SKIP] WebAssembly simd code is only supported with LLVM 11+.\n");
+        return 0;
+    }
+#endif
+
     SimdOpCheck test(hl_target);
 
     if (argc > 1) {
