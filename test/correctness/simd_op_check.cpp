@@ -1637,6 +1637,10 @@ public:
                 check("i16x8.shl",   8*w, i16_1 << i16(7));
                 check("i32x4.shl",   4*w, i32_1 << i32(7));
                 check("i64x2.shl",   2*w, i64_1 << i64(7));
+                check("i8x16.shl",   16*w, u8_1 << u8(7));
+                check("i16x8.shl",   8*w, u16_1 << u16(7));
+                check("i32x4.shl",   4*w, u32_1 << u32(7));
+                check("i64x2.shl",   2*w, u64_1 << u64(7));
 
                 // Left shift by variable-but-uniform-across-all-lanes scalar
 // TODO(srj): NOT BEING GENERATED AT TRUNK
@@ -1644,6 +1648,10 @@ public:
                 // check("i16x8.shl",   8*w, i16_1 << in_i16(0));
                 // check("i32x4.shl",   4*w, i32_1 << in_i32(0));
                 // check("i64x2.shl",   2*w, i64_1 << in_i64(0));
+                // check("i8x16.shl",   16*w, u8_1 << in_u8(0));
+                // check("i16x8.shl",   8*w, u16_1 << in_u16(0));
+                // check("i32x4.shl",   4*w, u32_1 << in_u32(0));
+                // check("i64x2.shl",   2*w, u64_1 << in_u64(0));
 
                 // Right shift by constant scalar
                 check("i8x16.shr_s",   16*w, i8_1 >> i8(7));
