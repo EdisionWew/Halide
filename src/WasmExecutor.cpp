@@ -14,6 +14,8 @@
 #include "Target.h"
 
 #include <cmath>
+#include <csignal>
+#include <cstdlib>
 #include <mutex>
 #include <sstream>
 #include <unordered_map>
@@ -228,7 +230,7 @@ public:
             // Just extend the last (free) region
             r.size += delta;
         }
-        internal_assert(start + r.size == new_total_size);
+
         // bookkeeping
         total_size = new_total_size;
 
@@ -326,15 +328,20 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
 
     constexpr int c = sizeof(lld_arg_strs) / sizeof(lld_arg_strs[0]);
     const char *lld_args[c];
-    for (int i = 0; i < c; ++i)
+    for (int i = 0; i < c; ++i) {
         lld_args[i] = lld_arg_strs[i].c_str();
+    }
 
-    // TODO: something in lld::wasm::link() is doing something bad at exit time
-    // (throwing inside a global dtor? atexit? set_terminate?) that converts
-    // an exit-with-error into an exit-via-abort, which breaks our error tests.
-    // Find and fix.
+    // lld will temporarily hijack the signal handlers to ensure that temp files get cleaned up,
+    // but rather than preserving custom handlers in place, it restores the default handlers.
+    // This conflicts with some of our testing infrastructure, which relies on a SIGABRT handler
+    // set at global-ctor time to stay set. Therefore we'll save and restore this ourselves.
+    // Note that we must restore it before using internal_error (and also on the non-error path).
+    auto old_abort_handler = std::signal(SIGABRT, SIG_DFL);
+
 #if LLVM_VERSION >= 110
     if (!lld::wasm::link(lld_args, /*CanExitEarly*/ false, llvm::outs(), llvm::errs())) {
+        std::signal(SIGABRT, old_abort_handler);
         internal_error << "lld::wasm::link failed\n";
     }
 #elif LLVM_VERSION >= 100
@@ -342,6 +349,7 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
     llvm::raw_string_ostream lld_errs(lld_errs_string);
 
     if (!lld::wasm::link(lld_args, /*CanExitEarly*/ false, llvm::outs(), llvm::errs())) {
+        std::signal(SIGABRT, old_abort_handler);
         internal_error << "lld::wasm::link failed: (" << lld_errs.str() << ")\n";
     }
 #else
@@ -349,9 +357,12 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
     llvm::raw_string_ostream lld_errs(lld_errs_string);
 
     if (!lld::wasm::link(lld_args, /*CanExitEarly*/ false, lld_errs)) {
+        std::signal(SIGABRT, old_abort_handler);
         internal_error << "lld::wasm::link failed: (" << lld_errs.str() << ")\n";
     }
 #endif
+
+    std::signal(SIGABRT, old_abort_handler);
 
 #if WASM_DEBUG_LEVEL
     wasm_output.detach();

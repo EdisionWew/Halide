@@ -1540,6 +1540,10 @@ public:
 
         if (use_wasm_simd128) {
             for (int w = 1; w <= 4; w <<= 1) {
+                // create arbitrary 16-byte constant
+// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // check("v128.constant", 16 * w, u8_1 * u8(42 + x));
+
                 // Create vector with identical lanes
                 check("i8x16.splat", 16 * w, u8_1 * u8(42));
                 check("i16x8.splat", 8 * w, u16_1 * u16(42));
