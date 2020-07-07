@@ -1541,7 +1541,7 @@ public:
         if (use_wasm_simd128) {
             for (int w = 1; w <= 4; w <<= 1) {
                 // create arbitrary 16-byte constant
-// TODO(srj): NOT BEING GENERATED AT TRUNK
+// TODO(srj): NOT BEING GENERATED AT LLVM TRUNK (known issue)
                 // check("v128.constant", 16 * w, u8_1 * u8(42 + x));
 
                 // Create vector with identical lanes
@@ -1638,12 +1638,12 @@ public:
                 check("i32x4.shl",   4*w, i32_1 << i32(7));
                 check("i64x2.shl",   2*w, i64_1 << i64(7));
 
-                // Left shift by variable scalar
+                // Left shift by variable-but-uniform-across-all-lanes scalar
 // TODO(srj): NOT BEING GENERATED AT TRUNK
-                // check("i8x16.shl",   16*w, i8_1 << i8(x));
-                // check("i16x8.shl",   8*w, i16_1 << i16(x));
-                // check("i32x4.shl",   4*w, i32_1 << i32(x));
-                // check("i64x2.shl",   2*w, i64_1 << i64(x));
+                // check("i8x16.shl",   16*w, i8_1 << in_i8(0));
+                // check("i16x8.shl",   8*w, i16_1 << in_i16(0));
+                // check("i32x4.shl",   4*w, i32_1 << in_i32(0));
+                // check("i64x2.shl",   2*w, i64_1 << in_i64(0));
 
                 // Right shift by constant scalar
                 check("i8x16.shr_s",   16*w, i8_1 >> i8(7));
@@ -1656,14 +1656,15 @@ public:
                 check("i64x2.shr_u",   2*w, u64_1 >> i64(7));
 
 // TODO(srj): NOT BEING GENERATED AT TRUNK
-                // check("i8x16.shr_s",   16*w, i8_1 >> i8(x));
-                // check("i16x8.shr_s",   8*w, i16_1 >> i16(x));
-                // check("i32x4.shr_s",   4*w, i32_1 >> i32(x));
-                // check("i64x2.shr_s",   2*w, i64_1 >> i64(x));
-                // check("i8x16.shr_u",   16*w, u8_1 >> i8(x));
-                // check("i16x8.shr_u",   8*w, u16_1 >> i16(x));
-                // check("i32x4.shr_u",   4*w, u32_1 >> i32(x));
-                // check("i64x2.shr_u",   2*w, u64_1 >> i64(x));
+                // Right shift by variable-but-uniform-across-all-lanes scalar
+                // check("i8x16.shr_s",   16*w, i8_1 >> in_i8(0));
+                // check("i16x8.shr_s",   8*w, i16_1 >> in_i16(0));
+                // check("i32x4.shr_s",   4*w, i32_1 >> in_i32(0));
+                // check("i64x2.shr_s",   2*w, i64_1 >> in_i64(0));
+                // check("i8x16.shr_u",   16*w, u8_1 >> in_i8(0));
+                // check("i16x8.shr_u",   8*w, u16_1 >> in_i16(0));
+                // check("i32x4.shr_u",   4*w, u32_1 >> in_i32(0));
+                // check("i64x2.shr_u",   2*w, u64_1 >> in_i64(0));
 
                 // Bitwise logic
                 check("v128.and", 16 * w, i8_1 & i8_2);
