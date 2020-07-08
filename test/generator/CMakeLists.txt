@@ -209,7 +209,12 @@ halide_define_aot_test(gpu_object_lifetime)
 halide_define_aot_test(gpu_only)
 halide_define_aot_test(image_from_array)
 halide_define_aot_test(mandelbrot)
-halide_define_aot_test(memory_profiler_mandelbrot)
+if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+  # Wasm codegen doesn't currently support our profiler, which requires threads.
+  # TODO: re-enable if/when wasm gets thread support.
+else()
+  halide_define_aot_test(memory_profiler_mandelbrot)
+endif()
 halide_define_aot_test(msan)
 halide_define_aot_test(multitarget)
 halide_define_aot_test(opencl_runtime)
