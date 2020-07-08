@@ -179,7 +179,7 @@ void Pipeline::auto_schedule_Mullapudi2016(const Pipeline &pipeline, const Targe
 
     user_assert(target.arch == Target::X86 || target.arch == Target::ARM ||
                 target.arch == Target::POWERPC || target.arch == Target::MIPS)
-        << "The Mullapudi2016 autoscheduler is currently supported only on these architectures." << (int)target.arch;
+        << "The Mullapudi2016 autoscheduler is not supported on for the target: " << target;
     results.scheduler_name = "Mullapudi2016";
     results.schedule_source = generate_schedules(pipeline.contents->outputs, target, arch_params);
     // this autoscheduler has no featurization
