@@ -181,17 +181,21 @@ add_tutorial(lesson_19_wrapper_funcs.cpp)
 add_tutorial(lesson_20_cloning_funcs.cpp)
 
 # Lesson 21
-add_executable(lesson_21_auto_scheduler_generate lesson_21_auto_scheduler_generate.cpp)
-target_link_libraries(lesson_21_auto_scheduler_generate PRIVATE Halide::Generator)
+if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+    # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
+else()
+    add_executable(lesson_21_auto_scheduler_generate lesson_21_auto_scheduler_generate.cpp)
+    target_link_libraries(lesson_21_auto_scheduler_generate PRIVATE Halide::Generator)
 
-add_halide_library(auto_schedule_false FROM lesson_21_auto_scheduler_generate
-                   GENERATOR auto_schedule_gen PARAMS auto_schedule=false)
-add_halide_library(auto_schedule_true FROM lesson_21_auto_scheduler_generate
-                   GENERATOR auto_schedule_gen PARAMS auto_schedule=true machine_params=32,16777216,40)
+    add_halide_library(auto_schedule_false FROM lesson_21_auto_scheduler_generate
+                       GENERATOR auto_schedule_gen PARAMS auto_schedule=false)
+    add_halide_library(auto_schedule_true FROM lesson_21_auto_scheduler_generate
+                       GENERATOR auto_schedule_gen PARAMS auto_schedule=true machine_params=32,16777216,40)
 
-add_executable(lesson_21_auto_scheduler_run lesson_21_auto_scheduler_run.cpp)
-target_link_libraries(lesson_21_auto_scheduler_run PRIVATE
-                      auto_schedule_false auto_schedule_true Halide::Tools)
+    add_executable(lesson_21_auto_scheduler_run lesson_21_auto_scheduler_run.cpp)
+    target_link_libraries(lesson_21_auto_scheduler_run PRIVATE
+                          auto_schedule_false auto_schedule_true Halide::Tools)
 
-add_test(NAME tutorial_lesson_21_auto_scheduler_run COMMAND lesson_21_auto_scheduler_run)
-set_tests_properties(tutorial_lesson_21_auto_scheduler_run PROPERTIES LABELS tutorial)
+    add_test(NAME tutorial_lesson_21_auto_scheduler_run COMMAND lesson_21_auto_scheduler_run)
+    set_tests_properties(tutorial_lesson_21_auto_scheduler_run PROPERTIES LABELS tutorial)
+endif()
