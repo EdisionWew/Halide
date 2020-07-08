@@ -389,7 +389,6 @@ add_dependencies(Halide HalideIncludes)
 
 option(WITH_WABT "Include WABT Interpreter for WASM testing" ON)
 if (WITH_WABT)
-    message(STATUS "Fetching WABT...")
     include(FetchContent)
 
     if (HALIDE_ENABLE_EXCEPTIONS)
@@ -401,6 +400,8 @@ if (WITH_WABT)
     set(BUILD_TESTS OFF)
     set(BUILD_TOOLS OFF)
     set(BUILD_LIBWASM OFF)
+    set(WABT_VER 1.0.16)
+    message(STATUS "Fetching WABT ${WABT_VER}...")
     FetchContent_Declare(wabt
         GIT_REPOSITORY https://github.com/WebAssembly/wabt.git
         # GIT_TAG 1.0.16    # TODO: just get at tip for now
