@@ -210,10 +210,10 @@ halide_define_aot_test(gpu_only)
 halide_define_aot_test(image_from_array)
 halide_define_aot_test(mandelbrot)
 if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-  # Wasm codegen doesn't currently support our profiler, which requires threads.
-  # TODO: re-enable if/when wasm gets thread support.
+    # Wasm codegen doesn't currently support our profiler, which requires threads.
+    # TODO: re-enable if/when wasm gets thread support.
 else()
-  halide_define_aot_test(memory_profiler_mandelbrot)
+    halide_define_aot_test(memory_profiler_mandelbrot)
 endif()
 halide_define_aot_test(msan)
 halide_define_aot_test(multitarget)
@@ -249,15 +249,15 @@ target_link_libraries(generator_aot_alias PRIVATE alias_with_offset_42)
 
 # Autograd generator test
 if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-  # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
+    # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
 else()
-  halide_define_aot_test(autograd)
-  add_halide_library(autograd_grad
-                     GRADIENT_DESCENT
-                     FROM autograd.generator
-                     GENERATOR autograd
-                     PARAMS "auto_schedule=true")
-  target_link_libraries(generator_aot_autograd PRIVATE autograd_grad)
+    halide_define_aot_test(autograd)
+    add_halide_library(autograd_grad
+                       GRADIENT_DESCENT
+                       FROM autograd.generator
+                       GENERATOR autograd
+                       PARAMS "auto_schedule=true")
+    target_link_libraries(generator_aot_autograd PRIVATE autograd_grad)
 endif()
 
 # CXX mangling generator test.
