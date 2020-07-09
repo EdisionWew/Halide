@@ -1329,9 +1329,9 @@ struct WasmModuleContents {
     std::map<std::string, Halide::JITExtern> jit_externs;
     std::vector<JITModule> extern_deps;
     JITModule trampolines;
-    BDMalloc bdmalloc;
 
 #ifdef WITH_WABT
+    BDMalloc bdmalloc;
     wabt::interp::Store store;
     wabt::interp::Module::Ptr module;
     wabt::interp::Instance::Ptr instance;
@@ -1363,9 +1363,9 @@ WasmModuleContents::WasmModuleContents(
       extern_deps(extern_deps),
       trampolines(JITModule::make_trampolines_module(get_host_target(), jit_externs, kTrampolineSuffix, extern_deps)) {
 
+#ifdef WITH_WABT
     wdebug(1) << "Compiling wasm function " << fn_name << "\n";
 
-#ifdef WITH_WABT
     // Compile halide into wasm bytecode.
     std::vector<char> final_wasm = compile_to_wasm(halide_module, fn_name);
 
