@@ -1157,6 +1157,8 @@ const HostCallbackMap &get_host_callback_map() {
         DEFINE_POSIX_MATH_CALLBACK2(double, atan2)
         DEFINE_POSIX_MATH_CALLBACK2(float, fminf)
         DEFINE_POSIX_MATH_CALLBACK2(double, fmin)
+        DEFINE_POSIX_MATH_CALLBACK2(float, fmaxf)
+        DEFINE_POSIX_MATH_CALLBACK2(double, fmax)
         DEFINE_POSIX_MATH_CALLBACK2(float, powf)
         DEFINE_POSIX_MATH_CALLBACK2(double, pow)
 
