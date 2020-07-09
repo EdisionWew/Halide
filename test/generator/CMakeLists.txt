@@ -51,6 +51,10 @@ function(halide_define_aot_wasm_test NAME)
         # Needs matlab support (https://github.com/halide/Halide/issues/2082)
         return()
     endif()
+    if ("${NAME}" STREQUAL "autograd")
+        # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
+        return()
+    endif()
     if ("${NAME}" STREQUAL "cxx_mangling" OR
         "${NAME}" STREQUAL "cxx_mangling_define_extern")
         # Needs extra deps / build rules
@@ -335,12 +339,15 @@ add_halide_library(alias_with_offset_42
 halide_define_aot_test(alias EXTRA_LIBS alias_with_offset_42)
 
 # Autograd generator test
-add_halide_library(autograd_grad
-                   GRADIENT_DESCENT
-                   FROM autograd.generator
-                   GENERATOR autograd
-                   PARAMS "auto_schedule=true")
-halide_define_aot_test(autograd EXTRA_LIBS autograd_grad)
+halide_define_aot_test(autograd)
+if (TARGET generator_aot_autograd)
+    add_halide_library(autograd_grad
+                       GRADIENT_DESCENT
+                       FROM autograd.generator
+                       GENERATOR autograd
+                       PARAMS "auto_schedule=true")
+    target_link_libraries(generator_aot_autograd PRIVATE autograd_grad)
+endif()
 
 # CXX mangling generator test.
 halide_define_aot_test(cxx_mangling)
