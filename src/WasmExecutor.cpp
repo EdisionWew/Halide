@@ -479,21 +479,6 @@ void wabt_free(WabtContext &wabt_context, wasm32_ptr_t ptr) {
     wabt_context.bdmalloc.free_region(ptr);
 }
 
-JITUserContext *check_jit_user_context(JITUserContext *jit_user_context) {
-    user_assert(!jit_user_context->handlers.custom_malloc &&
-                !jit_user_context->handlers.custom_free)
-        << "The WebAssembly JIT cannot support set_custom_allocator()";
-    user_assert(!jit_user_context->handlers.custom_do_task)
-        << "The WebAssembly JIT cannot support set_custom_do_task()";
-    user_assert(!jit_user_context->handlers.custom_do_par_for)
-        << "The WebAssembly JIT cannot support set_custom_do_par_for()";
-    user_assert(!jit_user_context->handlers.custom_get_symbol &&
-                !jit_user_context->handlers.custom_load_library &&
-                !jit_user_context->handlers.custom_get_library_symbol)
-        << "The WebAssembly JIT cannot support custom_get_symbol, custom_load_library, or custom_get_library_symbol.";
-    return jit_user_context;
-}
-
 // Some internal code can call halide_error(null, ...), so this needs to be resilient to that.
 // Callers must expect null and not crash.
 JITUserContext *get_jit_user_context(WabtContext &wabt_context, const wabt::interp::Value &arg) {
@@ -1483,7 +1468,7 @@ int WasmModuleContents::run(const void **args) {
         const Argument &arg = arguments[i];
         const void *arg_ptr = args[i];
         if (arg.name == "__user_context") {
-            jit_user_context = check_jit_user_context(*(JITUserContext **)const_cast<void *>(arg_ptr));
+            jit_user_context = *(JITUserContext **)const_cast<void *>(arg_ptr);
         }
     }
 

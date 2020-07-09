@@ -1663,8 +1663,8 @@ public:
                 check("i32x4.shr_u", 4 * w, u32_1 >> i32(7));
                 check("i64x2.shr_u", 2 * w, u64_1 >> i64(7));
 
-                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // Right shift by variable-but-uniform-across-all-lanes scalar
+                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // check("i8x16.shr_s",   16*w, i8_1 >> in_i8(0));
                 // check("i16x8.shr_s",   8*w, i16_1 >> in_i16(0));
                 // check("i32x4.shr_s",   4*w, i32_1 >> in_i32(0));
