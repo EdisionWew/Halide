@@ -97,12 +97,12 @@ struct LoweredFunc {
 
     LoweredFunc(const std::string &name,
                 const std::vector<LoweredArgument> &args,
-                const Stmt &body,
+                Stmt body,
                 LinkageType linkage,
                 NameMangling mangling = NameMangling::Default);
     LoweredFunc(const std::string &name,
                 const std::vector<Argument> &args,
-                const Stmt &body,
+                Stmt body,
                 LinkageType linkage,
                 NameMangling mangling = NameMangling::Default);
 };
