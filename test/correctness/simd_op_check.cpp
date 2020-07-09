@@ -1541,7 +1541,7 @@ public:
         if (use_wasm_simd128) {
             for (int w = 1; w <= 4; w <<= 1) {
                 // create arbitrary 16-byte constant
-// TODO(srj): NOT BEING GENERATED AT LLVM TRUNK (known issue)
+                // TODO(srj): NOT BEING GENERATED AT LLVM TRUNK (known issue)
                 // check("v128.constant", 16 * w, u8_1 * u8(42 + x));
 
                 // Create vector with identical lanes
@@ -1633,17 +1633,17 @@ public:
                 check("i32x4.abs", 4 * w, abs(i32_1));
 
                 // Left shift by constant scalar
-                check("i8x16.shl",   16*w, i8_1 << i8(7));
-                check("i16x8.shl",   8*w, i16_1 << i16(7));
-                check("i32x4.shl",   4*w, i32_1 << i32(7));
-                check("i64x2.shl",   2*w, i64_1 << i64(7));
-                check("i8x16.shl",   16*w, u8_1 << u8(7));
-                check("i16x8.shl",   8*w, u16_1 << u16(7));
-                check("i32x4.shl",   4*w, u32_1 << u32(7));
-                check("i64x2.shl",   2*w, u64_1 << u64(7));
+                check("i8x16.shl", 16 * w, i8_1 << i8(7));
+                check("i16x8.shl", 8 * w, i16_1 << i16(7));
+                check("i32x4.shl", 4 * w, i32_1 << i32(7));
+                check("i64x2.shl", 2 * w, i64_1 << i64(7));
+                check("i8x16.shl", 16 * w, u8_1 << u8(7));
+                check("i16x8.shl", 8 * w, u16_1 << u16(7));
+                check("i32x4.shl", 4 * w, u32_1 << u32(7));
+                check("i64x2.shl", 2 * w, u64_1 << u64(7));
 
                 // Left shift by variable-but-uniform-across-all-lanes scalar
-// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // check("i8x16.shl",   16*w, i8_1 << in_i8(0));
                 // check("i16x8.shl",   8*w, i16_1 << in_i16(0));
                 // check("i32x4.shl",   4*w, i32_1 << in_i32(0));
@@ -1654,16 +1654,16 @@ public:
                 // check("i64x2.shl",   2*w, u64_1 << in_u64(0));
 
                 // Right shift by constant scalar
-                check("i8x16.shr_s",   16*w, i8_1 >> i8(7));
-                check("i16x8.shr_s",   8*w, i16_1 >> i16(7));
-                check("i32x4.shr_s",   4*w, i32_1 >> i32(7));
-                check("i64x2.shr_s",   2*w, i64_1 >> i64(7));
-                check("i8x16.shr_u",   16*w, u8_1 >> i8(7));
-                check("i16x8.shr_u",   8*w, u16_1 >> i16(7));
-                check("i32x4.shr_u",   4*w, u32_1 >> i32(7));
-                check("i64x2.shr_u",   2*w, u64_1 >> i64(7));
+                check("i8x16.shr_s", 16 * w, i8_1 >> i8(7));
+                check("i16x8.shr_s", 8 * w, i16_1 >> i16(7));
+                check("i32x4.shr_s", 4 * w, i32_1 >> i32(7));
+                check("i64x2.shr_s", 2 * w, i64_1 >> i64(7));
+                check("i8x16.shr_u", 16 * w, u8_1 >> i8(7));
+                check("i16x8.shr_u", 8 * w, u16_1 >> i16(7));
+                check("i32x4.shr_u", 4 * w, u32_1 >> i32(7));
+                check("i64x2.shr_u", 2 * w, u64_1 >> i64(7));
 
-// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // Right shift by variable-but-uniform-across-all-lanes scalar
                 // check("i8x16.shr_s",   16*w, i8_1 >> in_i8(0));
                 // check("i16x8.shr_s",   8*w, i16_1 >> in_i16(0));
@@ -1708,7 +1708,7 @@ public:
 
                 check("v128.bitselect", 16 * w, select(bool_1, u8_1, u8_2));
                 check("v128.bitselect", 8 * w, select(bool_1, u16_1, u16_2));
-// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // check("v128.bitselect", 4 * w, select(bool_1, u32_1, u32_2));
                 // check("v128.bitselect", 2 * w, select(bool_1, u64_1, u64_2));
                 // check("v128.bitselect", 4 * w, select(bool_1, f32_1, f32_2));
@@ -1798,14 +1798,14 @@ public:
                 }
 
                 // Integer to integer narrowing
-// TODO(srj): NOT BEING GENERATED AT TRUNK
+                // TODO(srj): NOT BEING GENERATED AT TRUNK
                 // check("i8x16.narrow_i16x8_s", 16*w, i8(i16_1));
                 // check("i8x16.narrow_i16x8_u", 16*w, u8(u16_1));
                 // check("i16x8.narrow_i32x4_s", 8*w, i16(i32_1));
                 // check("i16x8.narrow_i32x4_u", 8*w, u8(u16_1));
 
                 // Integer to integer widening
-// TODO(srj): NOT BEING GENERATED AT TRUNK (but these tests are bogus)
+                // TODO(srj): NOT BEING GENERATED AT TRUNK (but these tests are bogus)
                 // check("i16x8.widen_low_i8x16_s", 8*w, i8(x) * 2);
                 // check("i16x8.widen_high_i8x16_s", 8*w, i16(i8_1));
                 // check("i32x4.widen_low_i16x8_s", 4*w, i32(i16_1));
@@ -1847,7 +1847,7 @@ public:
                 check("f64x2.sub", 2 * w, f64_1 - f64_2);
 
                 // Floating-point division
-                check("f32x4.div",   4*w, f32_1 / f32_2);
+                check("f32x4.div", 4 * w, f32_1 / f32_2);
                 check("f64x2.div", 2 * w, f64_1 / f64_2);
 
                 // Floating-point multiplication
@@ -1855,7 +1855,7 @@ public:
                 check("f64x2.mul", 2 * w, f64_1 * f64_2);
 
                 // Square root
-                check("f32x4.sqrt",   4*w, sqrt(f32_1));
+                check("f32x4.sqrt", 4 * w, sqrt(f32_1));
                 check("f64x2.sqrt", 2 * w, sqrt(f64_1));
 
                 // Integer to floating point
