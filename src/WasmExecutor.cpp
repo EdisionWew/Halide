@@ -432,7 +432,7 @@ std::string to_string(const wabt::MemoryStream &m) {
 }
 
 struct WabtContext {
-    JITUserContext * const jit_user_context;
+    JITUserContext *const jit_user_context;
     wabt::interp::Memory &memory;
     BDMalloc &bdmalloc;
 
@@ -792,7 +792,7 @@ inline wabt::interp::Value load_value(const T &val) {
 // -----
 
 template<typename T>
-struct StoreValue{
+struct StoreValue {
     inline void operator()(const wabt::interp::Value &src, void *dst) {
         *(T *)dst = src.Get<T>();
     }
@@ -829,7 +829,6 @@ inline void store_value(const wabt::interp::Value &src, T *dst) {
     StoreValue<T>()(src, dst);
 }
 
-
 // --------------------------------------------------
 // Host Callback Functions
 // --------------------------------------------------
@@ -859,16 +858,16 @@ wabt::Result wabt_posix_math_2(wabt::interp::Thread &thread,
     return wabt::Result::Ok;
 }
 
-#define WABT_HOST_CALLBACK(x) \
-    wabt::Result wabt_jit_##x##_callback(wabt::interp::Thread &thread, \
+#define WABT_HOST_CALLBACK(x)                                              \
+    wabt::Result wabt_jit_##x##_callback(wabt::interp::Thread &thread,     \
                                          const wabt::interp::Values &args, \
-                                         wabt::interp::Values &results, \
+                                         wabt::interp::Values &results,    \
                                          wabt::interp::Trap::Ptr *trap)
 
-#define WABT_HOST_CALLBACK_UNIMPLEMENTED(x) \
-    WABT_HOST_CALLBACK(x) { \
+#define WABT_HOST_CALLBACK_UNIMPLEMENTED(x)                                          \
+    WABT_HOST_CALLBACK(x) {                                                          \
         internal_error << "WebAssembly JIT does not yet support the " #x "() call."; \
-        return wabt::Result::Ok; \
+        return wabt::Result::Ok;                                                     \
     }
 
 WABT_HOST_CALLBACK(__cxa_atexit) {
@@ -878,7 +877,7 @@ WABT_HOST_CALLBACK(__cxa_atexit) {
 
 WABT_HOST_CALLBACK(__extendhfsf2) {
     const uint16_t in = args[0].Get<uint16_t>();
-    const float out = (float) float16_t::make_from_bits(in);
+    const float out = (float)float16_t::make_from_bits(in);
     results[0] = wabt::interp::Value::Make(out);
     return wabt::Result::Ok;
 }
@@ -1442,7 +1441,7 @@ WasmModuleContents::WasmModuleContents(
         }
         if (e.type.name == "memory") {
             internal_assert(e.type.type->kind == wabt::ExternalKind::Memory);
-            internal_assert(!memory.get()) << "Expected exactly one memory object but saw " << (void*) memory.get();
+            internal_assert(!memory.get()) << "Expected exactly one memory object but saw " << (void *)memory.get();
             memory = store.UnsafeGet<wabt::interp::Memory>(instance->memories()[e.index]);
             wdebug(1) << "heap_size is " << memory->ByteSize() << "\n";
             continue;
@@ -1547,7 +1546,6 @@ int WasmModuleContents::run(const void **args) {
     // bdmalloc.reset();
 
     return result;
-
 
 #endif
 

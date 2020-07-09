@@ -129,8 +129,8 @@ string CodeGen_WebAssembly::mattrs() const {
     }
 
     if (target.has_feature(Target::WasmSatFloatToInt)) {
-       s << sep << "+nontrapping-fptoint";
-       sep = ",";
+        s << sep << "+nontrapping-fptoint";
+        sep = ",";
     }
 
     user_assert(target.os == Target::WebAssemblyRuntime)
