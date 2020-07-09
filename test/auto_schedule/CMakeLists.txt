@@ -1,4 +1,4 @@
-if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+if (TARGET_WEBASSEMBLY AND HL_JIT_TARGET MATCHES "wasm")
       # Mullapudi2016 autoscheduler doesn't support wasm output
 else ()
       tests(GROUPS auto_schedule

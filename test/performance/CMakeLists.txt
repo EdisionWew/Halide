@@ -1,4 +1,4 @@
-if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+if (TARGET_WEBASSEMBLY AND HL_JIT_TARGET MATCHES "wasm")
       # All these tests use the JIT, which is an interpreter
       # for WebAssembly, so the performance results will be slow
       # and/or wrong. Just skip this entire suite.
