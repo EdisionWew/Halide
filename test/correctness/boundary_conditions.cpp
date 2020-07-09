@@ -392,6 +392,10 @@ int main(int argc, char **argv) {
         // https://github.com/halide/Halide/issues/2148
         vector_width_max = 4;
     }
+    if (target.arch == Target::WebAssembly) {
+        // wasm jit is very slow, shorten this test there
+        vector_width_max = 4;
+    }
     for (int vector_width = 1; vector_width <= vector_width_max; vector_width *= 2) {
         std::cout << "Testing vector_width: " << vector_width << "\n";
         if (target.has_feature(Target::OpenGLCompute)) {
