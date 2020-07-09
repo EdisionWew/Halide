@@ -186,7 +186,7 @@ add_tutorial(lesson_20_cloning_funcs.cpp)
 
 # Lesson 21
 if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-    # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
+    # TODO: Requires custom build rules to work under wasm
 else()
     add_executable(lesson_21_auto_scheduler_generate lesson_21_auto_scheduler_generate.cpp)
     target_link_libraries(lesson_21_auto_scheduler_generate PRIVATE Halide::Generator)
