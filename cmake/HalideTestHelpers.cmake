@@ -38,11 +38,15 @@ endif ()
 function(add_halide_test TARGET)
     set(options EXPECT_FAILURE)
     set(oneValueArgs WORKING_DIRECTORY)
-    set(multiValueArgs GROUPS)
+    set(multiValueArgs GROUPS COMMAND)
     cmake_parse_arguments(args "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
+    if (NOT args_COMMAND)
+        set(args_COMMAND ${TARGET})
+    endif ()
+
     add_test(NAME ${TARGET}
-             COMMAND ${TARGET}
+             COMMAND ${args_COMMAND}
              WORKING_DIRECTORY "${args_WORKING_DIRECTORY}")
 
     set_tests_properties(${TARGET} PROPERTIES
@@ -52,6 +56,16 @@ function(add_halide_test TARGET)
     if (${args_EXPECT_FAILURE})
         set_tests_properties(${TARGET} PROPERTIES WILL_FAIL true)
     endif ()
+
+    if (args_GROUPS)
+        list(GET args_GROUPS 0 PRIMARY_GROUP)
+        set(META_TARGET test_${PRIMARY_GROUP})
+        if (NOT TARGET ${META_TARGET})
+            add_custom_target(${META_TARGET})
+        endif ()
+        add_dependencies(${META_TARGET} ${TARGET})
+    endif()
+
 endfunction()
 
 function(tests)
@@ -82,13 +96,6 @@ function(tests)
             add_halide_test("${TARGET}" GROUPS ${args_GROUPS})
         endif ()
     endforeach ()
-
-
-    set(META_TARGET test_${PRIMARY_GROUP})
-    if (NOT TARGET ${META_TARGET})
-        add_custom_target(${META_TARGET})
-    endif ()
-    add_dependencies(${META_TARGET} ${TEST_NAMES})
 
     set(TEST_NAMES "${TEST_NAMES}" PARENT_SCOPE)
 endfunction(tests)

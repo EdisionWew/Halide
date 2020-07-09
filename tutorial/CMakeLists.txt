@@ -49,7 +49,7 @@ add_tutorial(lesson_09_update_definitions.cpp WITH_IMAGE_IO WITH_OPENMP)
 
 if (TARGET_PTX)
     if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-        # TODO: Requires custom toolchain to work under wasm.
+        # TODO: Requires custom build rules to work under wasm.
     else()
         # Tutorial 10 requires that we build generation code, then run it,
         # so we can build the final executable.
@@ -153,26 +153,30 @@ set_tests_properties(tutorial_lesson_15_check_files PROPERTIES
                      FIXTURES_REQUIRED tutorial_lesson_15)
 
 # Lesson 16
-add_executable(lesson_16_rgb_generate lesson_16_rgb_generate.cpp)
-target_link_libraries(lesson_16_rgb_generate PRIVATE Halide::Generator)
+if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+    # TODO: Requires custom build rules to work under wasm
+else ()
+    add_executable(lesson_16_rgb_generate lesson_16_rgb_generate.cpp)
+    target_link_libraries(lesson_16_rgb_generate PRIVATE Halide::Generator)
 
-add_halide_library(brighten_planar FROM lesson_16_rgb_generate
-                   GENERATOR brighten PARAMS layout=planar)
-add_halide_library(brighten_interleaved FROM lesson_16_rgb_generate
-                   GENERATOR brighten PARAMS layout=interleaved)
-add_halide_library(brighten_either FROM lesson_16_rgb_generate
-                   GENERATOR brighten PARAMS layout=either)
-add_halide_library(brighten_specialized FROM lesson_16_rgb_generate
-                   GENERATOR brighten PARAMS layout=specialized)
+    add_halide_library(brighten_planar FROM lesson_16_rgb_generate
+                       GENERATOR brighten PARAMS layout=planar)
+    add_halide_library(brighten_interleaved FROM lesson_16_rgb_generate
+                       GENERATOR brighten PARAMS layout=interleaved)
+    add_halide_library(brighten_either FROM lesson_16_rgb_generate
+                       GENERATOR brighten PARAMS layout=either)
+    add_halide_library(brighten_specialized FROM lesson_16_rgb_generate
+                       GENERATOR brighten PARAMS layout=specialized)
 
-add_executable(lesson_16_rgb_run lesson_16_rgb_run.cpp)
-target_link_libraries(lesson_16_rgb_run PRIVATE
-                      brighten_planar brighten_interleaved brighten_either brighten_specialized
-                      Halide::ImageIO
-                      Halide::Tools)
+    add_executable(lesson_16_rgb_run lesson_16_rgb_run.cpp)
+    target_link_libraries(lesson_16_rgb_run PRIVATE
+                          brighten_planar brighten_interleaved brighten_either brighten_specialized
+                          Halide::ImageIO
+                          Halide::Tools)
 
-add_test(NAME tutorial_lesson_16_rgb_run COMMAND lesson_16_rgb_run)
-set_tests_properties(tutorial_lesson_16_rgb_run PROPERTIES LABELS tutorial)
+    add_test(NAME tutorial_lesson_16_rgb_run COMMAND lesson_16_rgb_run)
+    set_tests_properties(tutorial_lesson_16_rgb_run PROPERTIES LABELS tutorial)
+endif ()
 
 # Lessons 17 - 20
 add_tutorial(lesson_17_predicated_rdom.cpp)

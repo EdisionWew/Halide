@@ -49,11 +49,6 @@ endif
 
 SHELL = bash
 CXX ?= g++
-# EMCC is the tool that invokes Emscripten
-EMCC ?= emcc
-# WASM_SHELL is the shell tool used to run AOT-compiled WebAssembly.
-# (Node could be used instead.)
-WASM_SHELL ?= d8
 PREFIX ?= /usr/local
 LLVM_CONFIG ?= llvm-config
 LLVM_COMPONENTS= $(shell $(LLVM_CONFIG) --components)
@@ -122,7 +117,6 @@ WITH_POWERPC ?= $(findstring powerpc, $(LLVM_COMPONENTS))
 WITH_PTX ?= $(findstring nvptx, $(LLVM_COMPONENTS))
 # AMDGPU target is WIP
 WITH_AMDGPU ?= $(findstring amdgpu, $(LLVM_COMPONENTS))
-WITH_WEBASSEMBLY ?= $(findstring webassembly, $(LLVM_COMPONENTS))
 WITH_OPENCL ?= not-empty
 WITH_METAL ?= not-empty
 WITH_OPENGL ?= not-empty
@@ -146,30 +140,6 @@ MIPS_LLVM_CONFIG_LIB=$(if $(WITH_MIPS), mips, )
 
 POWERPC_CXX_FLAGS=$(if $(WITH_POWERPC), -DWITH_POWERPC, )
 POWERPC_LLVM_CONFIG_LIB=$(if $(WITH_POWERPC), powerpc, )
-
-WEBASSEMBLY_CXX_FLAGS=$(if $(WITH_WEBASSEMBLY), -DWITH_WEBASSEMBLY, )
-WEBASSEMBLY_LLVM_CONFIG_LIB=$(if $(WITH_WEBASSEMBLY), webassembly, )
-
-ifneq (,$(findstring wasm_simd128,$(HL_TARGET)))
-	EMCC_SIMD_OPT=1
-	WASM_SHELL += --experimental-wasm-simd
-else
-	EMCC_SIMD_OPT=0
-endif
-
-ifneq (,$(findstring node,$(WASM_SHELL)))
-	# If 'node' is anywhere in the string, assume Node
-	EMCC_ENVIRONMENT=node
-else
-	# assume d8
-	EMCC_ENVIRONMENT=shell
-endif
-
-# We slurp in the default ~/.emscripten config file and make an altered version
-# with LLVM_ROOT pointing to the LLVM we are using, so that we can build with
-# the 'correct' version (ie the one that the rest of Halide is using) whether
-# or not ~/.emscripten has been edited correctly.
-EMCC_CONFIG=$(shell cat $(HOME)/.emscripten | grep -v LLVM_ROOT | tr '\n' ';')LLVM_ROOT='$(LLVM_BINDIR)'
 
 PTX_CXX_FLAGS=$(if $(WITH_PTX), -DWITH_PTX, )
 PTX_LLVM_CONFIG_LIB=$(if $(WITH_PTX), nvptx, )
@@ -234,7 +204,6 @@ CXX_FLAGS += $(OPENGL_CXX_FLAGS)
 CXX_FLAGS += $(D3D12_CXX_FLAGS)
 CXX_FLAGS += $(MIPS_CXX_FLAGS)
 CXX_FLAGS += $(POWERPC_CXX_FLAGS)
-CXX_FLAGS += $(WEBASSEMBLY_CXX_FLAGS)
 CXX_FLAGS += $(INTROSPECTION_CXX_FLAGS)
 CXX_FLAGS += $(EXCEPTIONS_CXX_FLAGS)
 CXX_FLAGS += $(AMDGPU_CXX_FLAGS)
@@ -1108,14 +1077,12 @@ test_auto_schedule: $(AUTO_SCHEDULE_TESTS:$(ROOT_DIR)/test/auto_schedule/%.cpp=a
 .PHONY: test_correctness_multi_gpu
 test_correctness_multi_gpu: correctness_gpu_multi_device
 
-# There are 4 types of tests for generators:
+# There are 3 types of tests for generators:
 # 1) Externally-written aot-based tests
 # 2) Externally-written aot-based tests (compiled using C++ backend)
-# 3) Externally-written JIT-based tests (compiled using wasm backend)
-# 4) Externally-written JIT-based tests
+# 3) Externally-written JIT-based tests
 GENERATOR_AOT_TESTS = $(GENERATOR_EXTERNAL_TESTS:$(ROOT_DIR)/test/generator/%_aottest.cpp=generator_aot_%)
 GENERATOR_AOTCPP_TESTS = $(GENERATOR_EXTERNAL_TESTS:$(ROOT_DIR)/test/generator/%_aottest.cpp=generator_aotcpp_%)
-GENERATOR_AOTWASM_TESTS = $(GENERATOR_EXTERNAL_TESTS:$(ROOT_DIR)/test/generator/%_aottest.cpp=generator_aotwasm_%)
 GENERATOR_JIT_TESTS = $(GENERATOR_EXTERNAL_TESTS:$(ROOT_DIR)/test/generator/%_jittest.cpp=generator_jit_%)
 
 # multitarget test doesn't make any sense for the CPP backend; just skip it.
@@ -1172,28 +1139,6 @@ GENERATOR_AOTCPP_TESTS := $(filter-out generator_aotcpp_stubtest,$(GENERATOR_AOT
 GENERATOR_AOTCPP_TESTS := $(filter-out generator_aotcpp_stubuser,$(GENERATOR_AOTCPP_TESTS))
 
 test_aotcpp_generator: $(GENERATOR_AOTCPP_TESTS)
-
-# Similar story: filter out the tests that aren't workable/useful for wasm
-
-# Multitarget not a thing for wasm
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_multitarget,$(GENERATOR_AOTWASM_TESTS))
-
-# Needs matlab support (https://github.com/halide/Halide/issues/2082)
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_matlab,$(GENERATOR_AOTWASM_TESTS))
-
-# Needs extra deps / build rules
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_cxx_mangling,$(GENERATOR_AOTWASM_TESTS))
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_cxx_mangling_define_extern,$(GENERATOR_AOTWASM_TESTS))
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_nested_externs,$(GENERATOR_AOTWASM_TESTS))
-
-# Requires threading support, not yet available for wasm tests
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_async_parallel,$(GENERATOR_AOTWASM_TESTS))
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_variable_num_threads,$(GENERATOR_AOTWASM_TESTS))
-
-# Requires profiler support (which requires threading), not yet available for wasm tests
-GENERATOR_AOTWASM_TESTS := $(filter-out generator_aotwasm_memory_profiler_mandelbrot,$(GENERATOR_AOTWASM_TESTS))
-
-test_aotwasm_generator: $(GENERATOR_AOTWASM_TESTS)
 
 # This is just a test to ensure than RunGen builds and links for a critical mass of Generators;
 # not all will work directly (e.g. due to missing define_externs at link time), so we disable
@@ -1474,7 +1419,6 @@ $(FILTERS_DIR)/metadata_tester_ucon.a: $(BIN_DIR)/metadata_tester.generator
 	$(CURDIR)/$< -g metadata_tester -f metadata_tester_ucon $(GEN_AOT_OUTPUTS) -o $(CURDIR)/$(FILTERS_DIR) target=$(TARGET)-user_context-no_runtime $(METADATA_TESTER_GENERATOR_ARGS)
 
 $(BIN_DIR)/$(TARGET)/generator_aot_metadata_tester: $(FILTERS_DIR)/metadata_tester_ucon.a
-$(BIN_DIR)/$(TARGET)/generator_aotwasm_metadata_tester.js: $(FILTERS_DIR)/metadata_tester_ucon.a
 
 $(FILTERS_DIR)/multitarget.a: $(BIN_DIR)/multitarget.generator
 	@mkdir -p $(@D)
@@ -1513,8 +1457,6 @@ ifneq ($(TEST_CUDA), )
 $(BIN_DIR)/$(TARGET)/generator_aot_cxx_mangling: $(FILTERS_DIR)/cxx_mangling_gpu.a
 endif
 $(BIN_DIR)/$(TARGET)/generator_aot_cxx_mangling_define_extern: $(FILTERS_DIR)/cxx_mangling.a
-
-$(BIN_DIR)/$(TARGET)/generator_aotwasm_tiled_blur.js: $(FILTERS_DIR)/blur2x2.a
 
 $(BIN_DIR)/$(TARGET)/generator_aotcpp_tiled_blur: $(FILTERS_DIR)/blur2x2.halide_generated.cpp
 ifneq ($(TEST_CUDA), )
@@ -1580,25 +1522,6 @@ $(BIN_DIR)/$(TARGET)/generator_aotcpp_%: $(ROOT_DIR)/test/generator/%_aottest.cp
 	@mkdir -p $(@D)
 	$(CXX) $(GEN_AOT_CXX_FLAGS) $(filter %.cpp %.o %.a,$^) $(GEN_AOT_INCLUDES) $(GEN_AOT_LD_FLAGS) -o $@
 
-ifneq ($(WITH_WEBASSEMBLY), )
-
-GEN_AOT_CXX_FLAGS_WASM := $(filter-out -march=${ARCH_FOR_TESTS},$(GEN_AOT_CXX_FLAGS))
-
-GEN_AOT_LD_FLAGS_WASM := $(filter-out -lz,$(GEN_AOT_LD_FLAGS))
-GEN_AOT_LD_FLAGS_WASM := $(filter-out -ldl,$(GEN_AOT_LD_FLAGS_WASM))
-GEN_AOT_LD_FLAGS_WASM := $(filter-out -lpthread,$(GEN_AOT_LD_FLAGS_WASM))
-
-$(BIN_DIR)/$(TARGET)/generator_aotwasm_%.js: $(ROOT_DIR)/test/generator/%_aottest.cpp $(FILTERS_DIR)/%.a $(FILTERS_DIR)/%.h $(RUNTIME_EXPORTED_INCLUDES) $(BIN_DIR)/$(TARGET)/runtime.a
-	@[[ "$(TARGET)" == "wasm-32-wasmrt"* ]] || (echo "HL_TARGET must begin with wasm-32-wasmrt" && exit 1)
-	@mkdir -p $(@D)
-	@# --source-map-base is just to silence an irrelevant warning from Emscripten
-	EMCC_WASM_BACKEND=1 EM_CONFIG="$(EMCC_CONFIG)" $(EMCC) $(GEN_AOT_CXX_FLAGS_WASM) -s WASM=1 -s SIMD=$(EMCC_SIMD_OPT) -s EXIT_RUNTIME=1 -s ENVIRONMENT=$(EMCC_ENVIRONMENT) --source-map-base . $(filter %.cpp %.o %.a,$^) $(GEN_AOT_INCLUDES) $(GEN_AOT_LD_FLAGS_WASM) -o $@
-
-$(BIN_DIR)/$(TARGET)/generator_aotwasm_%.wasm: $(BIN_DIR)/$(TARGET)/generator_aotwasm_%.js
-	@# nothing
-
-endif
-
 # MSAN test doesn't use the standard runtime
 $(BIN_DIR)/$(TARGET)/generator_aot_msan: $(ROOT_DIR)/test/generator/msan_aottest.cpp $(FILTERS_DIR)/msan.a $(FILTERS_DIR)/msan.h $(RUNTIME_EXPORTED_INCLUDES)
 	@mkdir -p $(@D)
@@ -1608,8 +1531,6 @@ $(BIN_DIR)/$(TARGET)/generator_aot_msan: $(ROOT_DIR)/test/generator/msan_aottest
 $(BIN_DIR)/$(TARGET)/generator_aot_alias: $(ROOT_DIR)/test/generator/alias_aottest.cpp $(FILTERS_DIR)/alias.a $(FILTERS_DIR)/alias_with_offset_42.a $(RUNTIME_EXPORTED_INCLUDES) $(BIN_DIR)/$(TARGET)/runtime.a
 	@mkdir -p $(@D)
 	$(CXX) $(GEN_AOT_CXX_FLAGS) $(filter %.cpp %.o %.a,$^) $(GEN_AOT_INCLUDES) $(GEN_AOT_LD_FLAGS) -o $@
-
-$(BIN_DIR)/$(TARGET)/generator_aotwasm_alias.js: $(FILTERS_DIR)/alias_with_offset_42.a
 
 $(BIN_DIR)/$(TARGET)/generator_aotcpp_alias: $(ROOT_DIR)/test/generator/alias_aottest.cpp $(FILTERS_DIR)/alias.halide_generated.cpp $(FILTERS_DIR)/alias_with_offset_42.halide_generated.cpp $(RUNTIME_EXPORTED_INCLUDES) $(BIN_DIR)/$(TARGET)/runtime.a
 	@mkdir -p $(@D)
@@ -1906,13 +1827,6 @@ generator_aotcpp_%: $(BIN_DIR)/$(TARGET)/generator_aotcpp_%
 	cd $(TMP_DIR) ; $(CURDIR)/$<
 	@-echo
 
-ifneq ($(WITH_WEBASSEMBLY), )
-generator_aotwasm_%: $(BIN_DIR)/$(TARGET)/generator_aotwasm_%.js $(BIN_DIR)/$(TARGET)/generator_aotwasm_%.wasm
-	@-mkdir -p $(TMP_DIR)
-	cd $(CURDIR)/$(BIN_DIR)/$(TARGET) ; $(WASM_SHELL) generator_aotwasm_$*.js
-	@-echo
-endif
-
 $(TMP_DIR)/images/%.png: $(ROOT_DIR)/tutorial/images/%.png
 	@-mkdir -p $(TMP_DIR)/images
 	cp $< $(TMP_DIR)/images/
@@ -1999,10 +1913,9 @@ BENCHMARK_APPS=\
 	stencil_chain
 
 $(BENCHMARK_APPS): distrib build_python_bindings
-	$(eval SUFFIX=$(if $(findstring wasm-32-wasmrt,$(HL_TARGET)),_wasm,))
 	@echo Building $@ for ${HL_TARGET}...
 	@$(MAKE) -C $(ROOT_DIR)/apps/$@ \
-		$(CURDIR)/$(BIN_DIR)/apps/$@/bin/$(HL_TARGET)/$@.rungen${SUFFIX} \
+		$(CURDIR)/$(BIN_DIR)/apps/$@/bin/$(HL_TARGET)/$@.rungen \
 		HALIDE_DISTRIB_PATH=$(CURDIR)/$(DISTRIB_DIR) \
 		HALIDE_PYTHON_BINDINGS_PATH=$(CURDIR)/$(BIN_DIR)/python3_bindings \
 		BIN_DIR=$(CURDIR)/$(BIN_DIR)/apps/$@/bin \
@@ -2016,7 +1929,7 @@ benchmark_apps: $(BENCHMARK_APPS)
 		echo ;\
 		echo Benchmarking $${APP} for ${HL_TARGET}... ; \
 		make -C $(ROOT_DIR)/apps/$${APP} \
-			$${APP}.benchmark${SUFFIX} \
+			$${APP}.benchmark \
 			HALIDE_DISTRIB_PATH=$(CURDIR)/$(DISTRIB_DIR) \
 			HALIDE_PYTHON_BINDINGS_PATH=$(CURDIR)/$(BIN_DIR)/python3_bindings \
 			BIN_DIR=$(CURDIR)/$(BIN_DIR)/apps/$${APP}/bin \

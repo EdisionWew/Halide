@@ -103,5 +103,9 @@ add_app_test(wavelet)
 
 # Add the autoschedulers.
 # TODO(#4053): refactor into separate modules
-add_subdirectory(autoscheduler)
-add_subdirectory(gradient_autoscheduler)
+if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+    # Don't attempt to build these for wasm yet.
+else ()
+    add_subdirectory(autoscheduler)
+    add_subdirectory(gradient_autoscheduler)
+endif ()

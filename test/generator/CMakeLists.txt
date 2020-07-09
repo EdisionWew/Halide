@@ -3,9 +3,14 @@
 ##
 
 function(halide_define_aot_test NAME)
+    if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
+      halide_define_aot_wasm_test(${ARGV})
+      return()
+    endif()
+
     set(options OMIT_DEFAULT_GENERATOR)
     set(oneValueArgs)
-    set(multiValueArgs)
+    set(multiValueArgs EXTRA_LIBS)
     cmake_parse_arguments(args "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(TARGET "generator_aot_${NAME}")
@@ -13,6 +18,9 @@ function(halide_define_aot_test NAME)
     target_include_directories("${TARGET}" PRIVATE "${Halide_SOURCE_DIR}/test/common")
     if (NOT args_OMIT_DEFAULT_GENERATOR)
         target_link_libraries(${TARGET} PRIVATE ${NAME})
+    endif ()
+    if (args_EXTRA_LIBS)
+      target_link_libraries(${TARGET} PRIVATE ${args_EXTRA_LIBS})
     endif ()
 
     # TODO(#4938): remove need for these definitions
@@ -25,16 +33,105 @@ function(halide_define_aot_test NAME)
     if ("${HL_TARGET}" MATCHES "cuda")
         target_compile_definitions("${TARGET}" PRIVATE TEST_CUDA)
     endif ()
-
     add_halide_test("${TARGET}" GROUPS generator)
 endfunction(halide_define_aot_test)
+
+function(halide_define_aot_wasm_test NAME)
+    set(options OMIT_DEFAULT_GENERATOR)
+    set(oneValueArgs)
+    set(multiValueArgs EXTRA_LIBS)
+    cmake_parse_arguments(args "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    # skip some tests for wasm:
+    if ("${NAME}" STREQUAL "multitarget")
+        # Multitarget not a thing for wasm
+        return()
+    endif()
+    if ("${NAME}" STREQUAL "matlab")
+        # Needs matlab support (https://github.com/halide/Halide/issues/2082)
+        return()
+    endif()
+    if ("${NAME}" STREQUAL "autograd")
+        # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
+        return()
+    endif()
+    if ("${NAME}" STREQUAL "cxx_mangling" OR
+        "${NAME}" STREQUAL "cxx_mangling_define_extern")
+        # Needs extra deps / build rules
+        return()
+    endif()
+    if ("${NAME}" STREQUAL "async_parallel" OR
+        "${NAME}" STREQUAL "variable_num_threads")
+        # Requires threading support, not yet available for wasm tests
+        return()
+    endif()
+    if ("${NAME}" STREQUAL "memory_profiler_mandelbrot")
+        # Requires profiler support (which requires threading), not yet available for wasm tests
+        return()
+    endif()
+
+    set(TARGET "generator_aot_${NAME}")
+
+    if ("$ENV{EMSDK}" STREQUAL "")
+      message(FATAL_ERROR "Building Generators for WASM requires that EMSDK point to a valid Emscripten install.")
+    endif()
+    set(EMCC "$ENV{EMSDK}/upstream/emscripten/emcc")
+
+    if ("$ENV{EMSDK_NODE}" STREQUAL "")
+      message(FATAL_ERROR "Testing Generators for WASM requires that EMSDK_NODE point to a valid Node.js executable.")
+    endif()
+    set(EMSDK_NODE "$ENV{EMSDK_NODE}")
+
+    set(EMCC_FLAGS
+            -I$<BUILD_INTERFACE:${Halide_BINARY_DIR}/include>
+            -I${Halide_SOURCE_DIR}/test/common
+            -I${Halide_SOURCE_DIR}/tools
+            -I${CMAKE_CURRENT_BINARY_DIR}
+            -O3
+            -g
+            -std=c++11
+            -Wall
+            -Wcast-qual
+            -Werror
+            -Wignored-qualifiers
+            -Wno-comment
+            -Wno-psabi
+            -Wno-unknown-warning-option
+            -Wno-unused-function
+            -Wsign-compare
+            -Wsuggest-override
+            -s STANDALONE_WASM=1
+            -s ENVIRONMENT=node
+            )
+
+    set(INPUTS "${CMAKE_CURRENT_SOURCE_DIR}/${NAME}_aottest.cpp;$<TARGET_FILE:${NAME}.runtime>")
+    foreach (L IN LISTS args_EXTRA_LIBS)
+      set(INPUTS "${INPUTS};$<TARGET_FILE:${L}>")
+    endforeach ()
+    if (NOT args_OMIT_DEFAULT_GENERATOR)
+      set(INPUTS "${INPUTS};$<TARGET_FILE:${NAME}>")
+    endif ()
+
+    # TODO: if/when Node supports 'standalone' wasm, switch to that instead of a .js/.wasm file pair
+    add_custom_command(OUTPUT "${TARGET}.wasm" "${TARGET}.js"
+                       DEPENDS ${INPUTS}
+                       VERBATIM
+                       COMMAND ${EMCC} ${EMCC_FLAGS} ${INPUTS} -o "${TARGET}.js")
+
+    add_custom_target("${TARGET}" ALL
+                      DEPENDS "${TARGET}.wasm" "${TARGET}.js")
+
+    add_halide_test("${TARGET}" GROUPS generator COMMAND "${EMSDK_NODE}" "${TARGET}.js")
+endfunction(halide_define_aot_wasm_test)
 
 ##
 # Common extra functionality needed by certain tests.
 ##
 
 add_library(cxx_mangling_externs STATIC cxx_mangling_externs.cpp)
+
 add_library(cxx_mangling_define_extern_externs STATIC cxx_mangling_define_extern_externs.cpp)
+target_link_libraries(cxx_mangling_define_extern_externs PRIVATE cxx_mangling)
 
 ##
 # Create targets for all the generators as well as library targets for their default configurations
@@ -209,12 +306,7 @@ halide_define_aot_test(gpu_object_lifetime)
 halide_define_aot_test(gpu_only)
 halide_define_aot_test(image_from_array)
 halide_define_aot_test(mandelbrot)
-if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-    # Wasm codegen doesn't currently support our profiler, which requires threads.
-    # TODO: re-enable if/when wasm gets thread support.
-else()
-    halide_define_aot_test(memory_profiler_mandelbrot)
-endif()
+halide_define_aot_test(memory_profiler_mandelbrot)
 halide_define_aot_test(msan)
 halide_define_aot_test(multitarget)
 halide_define_aot_test(opencl_runtime)
@@ -241,17 +333,14 @@ if (TARGET_PTX AND HL_TARGET MATCHES "opencl")
 endif ()
 
 # Alias generator test
-halide_define_aot_test(alias)
 add_halide_library(alias_with_offset_42
                    FROM alias.generator
                    GENERATOR alias_with_offset_42)
-target_link_libraries(generator_aot_alias PRIVATE alias_with_offset_42)
+halide_define_aot_test(alias EXTRA_LIBS alias_with_offset_42)
 
 # Autograd generator test
-if (TARGET_WEBASSEMBLY AND HL_TARGET MATCHES "wasm")
-    # Requires Mullapudi2016 autoscheduler, which doesn't support wasm
-else()
-    halide_define_aot_test(autograd)
+halide_define_aot_test(autograd)
+if (TARGET generator_aot_autograd)
     add_halide_library(autograd_grad
                        GRADIENT_DESCENT
                        FROM autograd.generator
@@ -262,20 +351,24 @@ endif()
 
 # CXX mangling generator test.
 halide_define_aot_test(cxx_mangling)
-target_link_libraries(cxx_mangling INTERFACE cxx_mangling_externs)
-if (TARGET_PTX AND HL_TARGET MATCHES "cuda")
-    add_halide_library(cxx_mangling_gpu
-                       FROM cxx_mangling.generator
-                       GENERATOR cxx_mangling
-                       FUNCTION_NAME HalideTest::cxx_mangling_gpu
-                       FEATURES c_plus_plus_name_mangling cuda)
-    target_link_libraries(generator_aot_cxx_mangling PRIVATE cxx_mangling_gpu)
+if (TARGET cxx_mangling)
+    target_link_libraries(cxx_mangling INTERFACE cxx_mangling_externs)
+    if (TARGET_PTX AND HL_TARGET MATCHES "cuda")
+        add_halide_library(cxx_mangling_gpu
+                           FROM cxx_mangling.generator
+                           GENERATOR cxx_mangling
+                           FUNCTION_NAME HalideTest::cxx_mangling_gpu
+                           FEATURES c_plus_plus_name_mangling cuda)
+        target_link_libraries(generator_aot_cxx_mangling PRIVATE cxx_mangling_gpu)
+    endif ()
 endif ()
 
 # CXX mangling with extern generator test
 halide_define_aot_test(cxx_mangling_define_extern)
-target_link_libraries(cxx_mangling_define_extern INTERFACE cxx_mangling_externs cxx_mangling_define_extern_externs)
-target_link_libraries(cxx_mangling_define_extern_externs PRIVATE cxx_mangling_externs cxx_mangling)
+if (TARGET cxx_mangling_define_extern)
+    target_link_libraries(cxx_mangling_define_extern INTERFACE cxx_mangling_externs cxx_mangling_define_extern_externs)
+    target_link_libraries(cxx_mangling_define_extern_externs PRIVATE cxx_mangling_externs cxx_mangling)
+endif ()
 
 # Define extern for OpenCL
 halide_define_aot_test(define_extern_opencl)
@@ -286,30 +379,26 @@ endif ()
 
 # Matlab generator test
 halide_define_aot_test(matlab)
-set_target_properties(generator_aot_matlab PROPERTIES ENABLE_EXPORTS True)
+if (TARGET generator_aot_matlab)
+  set_target_properties(generator_aot_matlab PROPERTIES ENABLE_EXPORTS True)
+endif ()
 
 # Metadata tester
-halide_define_aot_test(metadata_tester)
 add_halide_library(metadata_tester_ucon
                    FROM metadata_tester.generator
                    GENERATOR metadata_tester
                    FEATURES user_context
                    PARAMS ${PARAMS_metadata_tester})
-target_link_libraries(generator_aot_metadata_tester PRIVATE metadata_tester_ucon)
+halide_define_aot_test(metadata_tester EXTRA_LIBS metadata_tester_ucon)
 
 # Nested externs test
-halide_define_aot_test(nested_externs OMIT_DEFAULT_GENERATOR)
 add_halide_library(nested_externs_root FROM nested_externs.generator)
 add_halide_library(nested_externs_inner FROM nested_externs.generator)
 add_halide_library(nested_externs_combine FROM nested_externs.generator)
 add_halide_library(nested_externs_leaf FROM nested_externs.generator)
-target_link_libraries(generator_aot_nested_externs
-                      PRIVATE
-                      nested_externs_root
-                      nested_externs_inner
-                      nested_externs_combine
-                      nested_externs_leaf)
+halide_define_aot_test(nested_externs
+                       OMIT_DEFAULT_GENERATOR
+                       EXTRA_LIBS nested_externs_root nested_externs_inner nested_externs_combine nested_externs_leaf)
 
 # Tiled blur
-halide_define_aot_test(tiled_blur)
-target_link_libraries(generator_aot_tiled_blur PRIVATE blur2x2)
+halide_define_aot_test(tiled_blur EXTRA_LIBS blur2x2)
