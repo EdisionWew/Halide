@@ -393,8 +393,8 @@ int main(int argc, char **argv) {
         vector_width_max = 4;
     }
     if (target.arch == Target::WebAssembly) {
-        // wasm jit is very slow, shorten this test there
-        vector_width_max = 4;
+        // The wasm jit is very slow, so shorten this test here.
+        vector_width_max = 8;
     }
     for (int vector_width = 1; vector_width <= vector_width_max; vector_width *= 2) {
         std::cout << "Testing vector_width: " << vector_width << "\n";
