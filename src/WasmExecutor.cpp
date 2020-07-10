@@ -1352,6 +1352,8 @@ WasmModuleContents::WasmModuleContents(
       trampolines(JITModule::make_trampolines_module(get_host_target(), jit_externs, kTrampolineSuffix, extern_deps)) {
 
 #if WITH_WABT
+    user_assert(LLVM_VERSION >= 110) << "Using the WebAssembly JIT is only supported under LLVM 11+.";
+
     wdebug(1) << "Compiling wasm function " << fn_name << "\n";
 
     // Compile halide into wasm bytecode.
@@ -1576,7 +1578,7 @@ WasmModule WasmModule::compile(
     const std::map<std::string, Halide::JITExtern> &jit_externs,
     const std::vector<JITModule> &extern_deps) {
 #if !defined(WITH_WABT)
-    user_error << "Cannot run JITted JavaScript without configuring a JavaScript engine.";
+    user_error << "Cannot run JITted WebAssembly without configuring a WebAssembly engine.";
     return WasmModule();
 #endif
 

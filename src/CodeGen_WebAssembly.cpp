@@ -21,6 +21,7 @@ CodeGen_WebAssembly::CodeGen_WebAssembly(Target t)
 #if !defined(WITH_WEBASSEMBLY)
     user_error << "llvm build not configured with WebAssembly target enabled.\n";
 #endif
+    user_assert(LLVM_VERSION >= 110) << "Generating WebAssembly is only supported under LLVM 11+.";
     user_assert(llvm_WebAssembly_enabled) << "llvm build not configured with WebAssembly target enabled.\n";
     user_assert(target.bits == 32) << "Only wasm32 is supported.";
 }
