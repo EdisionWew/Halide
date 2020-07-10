@@ -6,7 +6,7 @@
 #include "Func.h"
 #include "ImageParam.h"
 #include "JITModule.h"
-#if defined(WITH_WABT)
+#if WITH_WABT
 #include "LLVM_Headers.h"
 #endif
 #include "LLVM_Output.h"
@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if defined(WITH_WABT)
+#if WITH_WABT
 #include "wabt-src/src/binary-reader.h"
 #include "wabt-src/src/error-formatter.h"
 #include "wabt-src/src/feature.h"
@@ -42,7 +42,7 @@ namespace Internal {
 // receive the result value.
 static const char kTrampolineSuffix[] = "_trampoline";
 
-#if defined(WITH_WABT)
+#if WITH_WABT
 
 namespace {
 
@@ -1318,7 +1318,7 @@ struct WasmModuleContents {
     std::vector<JITModule> extern_deps;
     JITModule trampolines;
 
-#ifdef WITH_WABT
+#if WITH_WABT
     BDMalloc bdmalloc;
     wabt::interp::Store store;
     wabt::interp::Module::Ptr module;
@@ -1351,7 +1351,7 @@ WasmModuleContents::WasmModuleContents(
       extern_deps(extern_deps),
       trampolines(JITModule::make_trampolines_module(get_host_target(), jit_externs, kTrampolineSuffix, extern_deps)) {
 
-#ifdef WITH_WABT
+#if WITH_WABT
     wdebug(1) << "Compiling wasm function " << fn_name << "\n";
 
     // Compile halide into wasm bytecode.
@@ -1445,7 +1445,7 @@ WasmModuleContents::WasmModuleContents(
 }
 
 int WasmModuleContents::run(const void **args) {
-#ifdef WITH_WABT
+#if WITH_WABT
     const auto &module_desc = module->desc();
 
     wabt::interp::FuncType *func_type = nullptr;
@@ -1543,7 +1543,7 @@ int WasmModuleContents::run(const void **args) {
 }
 
 WasmModuleContents::~WasmModuleContents() {
-#ifdef WITH_WABT
+#if WITH_WABT
     // nothing
 #endif
 }
@@ -1560,7 +1560,7 @@ void destroy<WasmModuleContents>(const WasmModuleContents *p) {
 
 /*static*/
 bool WasmModule::can_jit_target(const Target &target) {
-#if defined(WITH_WABT)
+#if WITH_WABT
     if (target.arch == Target::WebAssembly) {
         return true;
     }
