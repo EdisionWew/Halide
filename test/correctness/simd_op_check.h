@@ -213,7 +213,6 @@ public:
             asm_file.close();
         }
 
-#if 0
         // Also compile the error checking Func (to be sure it compiles without error)
         std::string fn_name = "test_" + name;
         error.compile_to_file(output_directory + fn_name, arg_types, fn_name, target);
@@ -276,7 +275,7 @@ public:
                 error_file.close();
             }
         }
-#endif
+
         return {op, error_msg.str()};
     }
 
